@@ -8,7 +8,7 @@
 import Foundation
 
 /// API의 명세(Specs)를 정의하는 프로토콜
-public protocol Endpoint {
+public protocol Endpoint: Sendable {
     var scheme: String { get }              // 예: "https"
     var host: String { get }                // 예: "api.networkkit.com"
     var path: String { get }                // 예: "/users"

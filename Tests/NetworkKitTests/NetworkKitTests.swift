@@ -31,7 +31,7 @@ struct NetworkKitTests {
     func testRequestSuccess() async throws {
         
         
-        let manager = NetworkManager(session: mockSession)
+        let manager = NetworkProvider(session: mockSession)
         
         // 2. 가짜 응답 데이터 준비
         let mockData = """
@@ -55,7 +55,7 @@ struct NetworkKitTests {
     
     @Test("404 에러 발생 시 적절한 NetworkError 반환 테스트")
     func testRequestFailure() async throws {
-        let manager = NetworkManager(session: mockSession)
+        let manager = NetworkProvider(session: mockSession)
         
         // 2. 요청이 오면 404 Not Found를 주라고 설정
         MockURLProtocol.requestHandler = { request in
@@ -75,7 +75,7 @@ struct NetworkKitTests {
     @Test("⚠️ [실패] JSON 키가 다르거나 타입이 틀리면 .decodingError 발생")
         func testDecodingError() async {
             
-            let manager = NetworkManager(session: mockSession)
+            let manager = NetworkProvider(session: mockSession)
             
             // Given: 'name'과 'age'가 필요한데, 'age' 대신 'isAdult'가 있는 엉뚱한 데이터 준비
             let wrongData = """
@@ -102,7 +102,7 @@ struct NetworkKitTests {
         
         @Test("🚫 [실패] HTTPURLResponse가 아닌 응답이 오면 .noResponse 발생")
         func testNoResponseError() async {
-            let manager = NetworkManager(session: mockSession)
+            let manager = NetworkProvider(session: mockSession)
             // Given: HTTPURLResponse가 아니라 그냥 URLResponse를 반환 (비정상 응답 시뮬레이션)
             MockURLProtocol.requestHandler = { request in
                 let nonHttpResponse = URLResponse(url: request.url!,
