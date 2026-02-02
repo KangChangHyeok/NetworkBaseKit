@@ -52,7 +52,7 @@ public actor NetworkProvider {
             let decodedData = try decoder.decode(T.self, from: data)
             return decodedData
         } catch {
-            print("디코딩 에러 발생: \(error)")
+            NetworkLogger.log(error: error, for: request)
             throw NetworkError.decodingError
         }
     }
