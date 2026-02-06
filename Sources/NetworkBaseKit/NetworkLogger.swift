@@ -6,30 +6,36 @@
 //
 
 import Foundation
+import OSLog
 
 public struct NetworkLogger {
+    
+    // MARK: - OSLog Logger
+    private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "NetworkBaseKit", category: "Network")
     
     // MARK: - 요청(Request) 로그
     static func log(request: URLRequest) {
         let method = request.httpMethod ?? "UNKNOWN"
         let url = request.url?.absoluteString ?? "N/A"
         
-        print("")
-        print("🌐 [Network] ────────────────────────────────────────")
-        print("🌐 [Network] 📤 REQUEST")
-        print("🌐 [Network] ├─ Method: \(method)")
-        print("🌐 [Network] ├─ URL: \(url)")
+        var logMessage = """
+        
+        🌐 [Network] ────────────────────────────────────────
+        🌐 [Network] 📤 REQUEST
+        🌐 [Network] ├─ Method: \(method)
+        🌐 [Network] ├─ URL: \(url)
+        """
         
         // Header
         if let headers = request.allHTTPHeaderFields, !headers.isEmpty {
-            print("🌐 [Network] ├─ Headers:")
+            logMessage += "\n🌐 [Network] ├─ Headers:"
             for (key, value) in headers {
                 // 민감한 정보 마스킹 (예: Authorization)
                 if key.lowercased() == "authorization" {
                     let maskedValue = maskToken(value)
-                    print("🌐 [Network] │     \(key): \(maskedValue)")
+                    logMessage += "\n🌐 [Network] │     \(key): \(maskedValue)"
                 } else {
-                    print("🌐 [Network] │     \(key): \(value)")
+                    logMessage += "\n🌐 [Network] │     \(key): \(value)"
                 }
             }
         }
@@ -40,15 +46,17 @@ public struct NetworkLogger {
                let prettyData = try? JSONSerialization.data(withJSONObject: jsonObject, options: .prettyPrinted),
                let prettyString = String(data: prettyData, encoding: .utf8) {
                 let indentedBody = indentString(prettyString, prefix: "🌐 [Network] │     ")
-                print("🌐 [Network] ├─ Body:")
-                print(indentedBody)
+                logMessage += "\n🌐 [Network] ├─ Body:\n\(indentedBody)"
             } else if let bodyString = String(data: body, encoding: .utf8) {
-                print("🌐 [Network] ├─ Body: \(bodyString)")
+                logMessage += "\n🌐 [Network] ├─ Body: \(bodyString)"
             }
         }
         
-        print("🌐 [Network] ────────────────────────────────────────")
-        print("")
+        logMessage += "\n🌐 [Network] ────────────────────────────────────────\n"
+        
+        // Console (print) + OSLog
+        print(logMessage)
+        logger.info("📤 REQUEST | \(method) | \(url)")
     }
     
     // MARK: - 응답(Response) 로그
@@ -57,21 +65,23 @@ public struct NetworkLogger {
         let isSuccess = (200...299).contains(statusCode)
         let statusEmoji = isSuccess ? "✅" : "❌"
         let statusText = isSuccess ? "SUCCESS" : "FAILURE"
+        let statusDescription = httpStatusDescription(statusCode)
         
-        print("")
-        print("🌐 [Network] ────────────────────────────────────────")
-        print("🌐 [Network] 📥 RESPONSE")
-        print("🌐 [Network] ├─ Status: \(statusEmoji) \(statusCode) \(statusText)")
+        var logMessage = """
+        
+        🌐 [Network] ────────────────────────────────────────
+        🌐 [Network] 📥 RESPONSE
+        🌐 [Network] ├─ Status: \(statusEmoji) \(statusCode) \(statusText)
+        """
         
         // 에러가 있는 경우
         if let error = error {
-            print("🌐 [Network] ├─ Error: \(error.localizedDescription)")
+            logMessage += "\n🌐 [Network] ├─ Error: \(error.localizedDescription)"
         }
         
         // HTTP 상태 코드 설명
         if statusCode != 0 {
-            let statusDescription = httpStatusDescription(statusCode)
-            print("🌐 [Network] ├─ Description: \(statusDescription)")
+            logMessage += "\n🌐 [Network] ├─ Description: \(statusDescription)"
         }
         
         // Data (JSON Pretty Print)
@@ -83,38 +93,55 @@ public struct NetworkLogger {
                 if prettyString.count > 1000 {
                     let truncated = String(prettyString.prefix(1000)) + "\n... (truncated)"
                     let indentedData = indentString(truncated, prefix: "🌐 [Network] │     ")
-                    print("🌐 [Network] ├─ Data (truncated):")
-                    print(indentedData)
+                    logMessage += "\n🌐 [Network] ├─ Data (truncated):\n\(indentedData)"
                 } else {
                     let indentedData = indentString(prettyString, prefix: "🌐 [Network] │     ")
-                    print("🌐 [Network] ├─ Data:")
-                    print(indentedData)
+                    logMessage += "\n🌐 [Network] ├─ Data:\n\(indentedData)"
                 }
             } else if let rawString = String(data: data, encoding: .utf8) {
-                print("🌐 [Network] ├─ Data (raw): \(rawString)")
+                logMessage += "\n🌐 [Network] ├─ Data (raw): \(rawString)"
             } else {
-                print("🌐 [Network] ├─ Data: \(data.count) bytes (binary)")
+                logMessage += "\n🌐 [Network] ├─ Data: \(data.count) bytes (binary)"
             }
         }
         
-        print("🌐 [Network] ────────────────────────────────────────")
-        print("")
+        logMessage += "\n🌐 [Network] ────────────────────────────────────────\n"
+        
+        // Console (print) + OSLog
+        print(logMessage)
+        
+        if isSuccess {
+            logger.info("📥 RESPONSE | \(statusEmoji) \(statusCode) \(statusDescription)")
+        } else {
+            logger.error("📥 RESPONSE | \(statusEmoji) \(statusCode) \(statusDescription)")
+        }
     }
     
     // MARK: - 에러 로그
     static func log(error: Error, for request: URLRequest? = nil) {
         let url = request?.url?.absoluteString ?? "N/A"
         
-        print("")
-        print("🌐 [Network] ────────────────────────────────────────")
-        print("🌐 [Network] ⚠️ ERROR")
+        var logMessage = """
+        
+        🌐 [Network] ────────────────────────────────────────
+        🌐 [Network] ⚠️ ERROR
+        """
+        
         if request != nil {
-            print("🌐 [Network] ├─ URL: \(url)")
+            logMessage += "\n🌐 [Network] ├─ URL: \(url)"
         }
-        print("🌐 [Network] ├─ Error: ❌ \(error.localizedDescription)")
-        print("🌐 [Network] ├─ Type: \(type(of: error))")
-        print("🌐 [Network] ────────────────────────────────────────")
-        print("")
+        
+        logMessage += """
+        
+        🌐 [Network] ├─ Error: ❌ \(error.localizedDescription)
+        🌐 [Network] ├─ Type: \(type(of: error))
+        🌐 [Network] ────────────────────────────────────────
+        
+        """
+        
+        // Console (print) + OSLog
+        print(logMessage)
+        logger.error("⚠️ ERROR | \(url) | \(error.localizedDescription)")
     }
     
     // MARK: - Helper Methods
