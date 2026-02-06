@@ -14,28 +14,25 @@ public struct NetworkLogger {
     private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "NetworkBaseKit", category: "Network")
     
     // MARK: - 요청(Request) 로그
-    static func log(request: URLRequest) {
+    public static func log(request: URLRequest) {
         let method = request.httpMethod ?? "UNKNOWN"
         let url = request.url?.absoluteString ?? "N/A"
         
-        var logMessage = """
-        
-        🌐 [Network] ────────────────────────────────────────
-        🌐 [Network] 📤 REQUEST
-        🌐 [Network] ├─ Method: \(method)
-        🌐 [Network] ├─ URL: \(url)
-        """
+        logger.info("────────────────────────────────────────")
+        logger.info("📤 REQUEST")
+        logger.info("├─ Method: \(method)")
+        logger.info("├─ URL: \(url)")
         
         // Header
         if let headers = request.allHTTPHeaderFields, !headers.isEmpty {
-            logMessage += "\n🌐 [Network] ├─ Headers:"
+            logger.info("├─ Headers:")
             for (key, value) in headers {
                 // 민감한 정보 마스킹 (예: Authorization)
                 if key.lowercased() == "authorization" {
                     let maskedValue = maskToken(value)
-                    logMessage += "\n🌐 [Network] │     \(key): \(maskedValue)"
+                    logger.info("│     \(key): \(maskedValue)")
                 } else {
-                    logMessage += "\n🌐 [Network] │     \(key): \(value)"
+                    logger.info("│     \(key): \(value)")
                 }
             }
         }
@@ -45,43 +42,48 @@ public struct NetworkLogger {
             if let jsonObject = try? JSONSerialization.jsonObject(with: body),
                let prettyData = try? JSONSerialization.data(withJSONObject: jsonObject, options: .prettyPrinted),
                let prettyString = String(data: prettyData, encoding: .utf8) {
-                let indentedBody = indentString(prettyString, prefix: "🌐 [Network] │     ")
-                logMessage += "\n🌐 [Network] ├─ Body:\n\(indentedBody)"
+                logger.info("├─ Body:")
+                for line in prettyString.components(separatedBy: "\n") {
+                    logger.info("│     \(line)")
+                }
             } else if let bodyString = String(data: body, encoding: .utf8) {
-                logMessage += "\n🌐 [Network] ├─ Body: \(bodyString)"
+                logger.info("├─ Body: \(bodyString)")
             }
         }
         
-        logMessage += "\n🌐 [Network] ────────────────────────────────────────\n"
-        
-        // Console (print) + OSLog
-        print(logMessage)
-        logger.info("📤 REQUEST | \(method) | \(url)")
+        logger.info("────────────────────────────────────────")
     }
     
     // MARK: - 응답(Response) 로그
-    static func log(response: URLResponse?, data: Data?, error: Error? = nil) {
+    public static func log(response: URLResponse?, data: Data?, error: Error? = nil) {
         let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
         let isSuccess = (200...299).contains(statusCode)
         let statusEmoji = isSuccess ? "✅" : "❌"
         let statusText = isSuccess ? "SUCCESS" : "FAILURE"
         let statusDescription = httpStatusDescription(statusCode)
         
-        var logMessage = """
+        logger.info("────────────────────────────────────────")
         
-        🌐 [Network] ────────────────────────────────────────
-        🌐 [Network] 📥 RESPONSE
-        🌐 [Network] ├─ Status: \(statusEmoji) \(statusCode) \(statusText)
-        """
+        if isSuccess {
+            logger.info("📥 RESPONSE")
+            logger.info("├─ Status: \(statusEmoji) \(statusCode) \(statusText)")
+        } else {
+            logger.error("📥 RESPONSE")
+            logger.error("├─ Status: \(statusEmoji) \(statusCode) \(statusText)")
+        }
         
         // 에러가 있는 경우
         if let error = error {
-            logMessage += "\n🌐 [Network] ├─ Error: \(error.localizedDescription)"
+            logger.error("├─ Error: \(error.localizedDescription)")
         }
         
         // HTTP 상태 코드 설명
         if statusCode != 0 {
-            logMessage += "\n🌐 [Network] ├─ Description: \(statusDescription)"
+            if isSuccess {
+                logger.info("├─ Description: \(statusDescription)")
+            } else {
+                logger.error("├─ Description: \(statusDescription)")
+            }
         }
         
         // Data (JSON Pretty Print)
@@ -90,69 +92,44 @@ public struct NetworkLogger {
                let prettyData = try? JSONSerialization.data(withJSONObject: jsonObject, options: .prettyPrinted),
                let prettyString = String(data: prettyData, encoding: .utf8) {
                 // 데이터가 너무 긴 경우 요약
+                let displayString: String
                 if prettyString.count > 1000 {
-                    let truncated = String(prettyString.prefix(1000)) + "\n... (truncated)"
-                    let indentedData = indentString(truncated, prefix: "🌐 [Network] │     ")
-                    logMessage += "\n🌐 [Network] ├─ Data (truncated):\n\(indentedData)"
+                    displayString = String(prettyString.prefix(1000)) + "\n... (truncated)"
+                    logger.info("├─ Data (truncated):")
                 } else {
-                    let indentedData = indentString(prettyString, prefix: "🌐 [Network] │     ")
-                    logMessage += "\n🌐 [Network] ├─ Data:\n\(indentedData)"
+                    displayString = prettyString
+                    logger.info("├─ Data:")
+                }
+                for line in displayString.components(separatedBy: "\n") {
+                    logger.info("│     \(line)")
                 }
             } else if let rawString = String(data: data, encoding: .utf8) {
-                logMessage += "\n🌐 [Network] ├─ Data (raw): \(rawString)"
+                logger.info("├─ Data (raw): \(rawString)")
             } else {
-                logMessage += "\n🌐 [Network] ├─ Data: \(data.count) bytes (binary)"
+                logger.info("├─ Data: \(data.count) bytes (binary)")
             }
         }
         
-        logMessage += "\n🌐 [Network] ────────────────────────────────────────\n"
-        
-        // Console (print) + OSLog
-        print(logMessage)
-        
-        if isSuccess {
-            logger.info("📥 RESPONSE | \(statusEmoji) \(statusCode) \(statusDescription)")
-        } else {
-            logger.error("📥 RESPONSE | \(statusEmoji) \(statusCode) \(statusDescription)")
-        }
+        logger.info("────────────────────────────────────────")
     }
     
     // MARK: - 에러 로그
-    static func log(error: Error, for request: URLRequest? = nil) {
+    public static func log(error: Error, for request: URLRequest? = nil) {
         let url = request?.url?.absoluteString ?? "N/A"
         
-        var logMessage = """
-        
-        🌐 [Network] ────────────────────────────────────────
-        🌐 [Network] ⚠️ ERROR
-        """
+        logger.error("────────────────────────────────────────")
+        logger.error("⚠️ ERROR")
         
         if request != nil {
-            logMessage += "\n🌐 [Network] ├─ URL: \(url)"
+            logger.error("├─ URL: \(url)")
         }
         
-        logMessage += """
-        
-        🌐 [Network] ├─ Error: ❌ \(error.localizedDescription)
-        🌐 [Network] ├─ Type: \(type(of: error))
-        🌐 [Network] ────────────────────────────────────────
-        
-        """
-        
-        // Console (print) + OSLog
-        print(logMessage)
-        logger.error("⚠️ ERROR | \(url) | \(error.localizedDescription)")
+        logger.error("├─ Error: ❌ \(error.localizedDescription)")
+        logger.error("├─ Type: \(String(describing: type(of: error)))")
+        logger.error("────────────────────────────────────────")
     }
     
     // MARK: - Helper Methods
-    
-    /// 문자열 들여쓰기
-    private static func indentString(_ string: String, prefix: String) -> String {
-        return string
-            .components(separatedBy: "\n")
-            .map { prefix + $0 }
-            .joined(separator: "\n")
-    }
     
     /// 토큰 마스킹 (보안)
     private static func maskToken(_ token: String) -> String {
