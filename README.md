@@ -13,7 +13,7 @@ Postman / Apidog을 쓰던 감각 그대로 API를 코드로 정의하는 Swift 
 
 - Swift 6 / async-await / typed throws (`throws(NetworkError)`)
 - 외부 의존성 없음
-- iOS 14+, macOS 11+, watchOS 7+
+- iOS 26+, macOS 26+, watchOS 26+
 
 ---
 
@@ -21,7 +21,7 @@ Postman / Apidog을 쓰던 감각 그대로 API를 코드로 정의하는 Swift 
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/KangChangHyeok/NetworkBaseKit", from: "2.0.0")
+    .package(url: "https://github.com/KangChangHyeok/NetworkBaseKit", from: "3.0.0")
 ]
 ```
 
@@ -378,6 +378,14 @@ print(request.url!)   // https://dev.api.com/v1/users/me
 ```
 
 ---
+
+## 2.x → 3.0 마이그레이션
+
+3.0은 최소 지원 버전만 올린 릴리스입니다. **API는 2.x와 같아서 코드를 바꿀 필요는 없습니다.**
+
+- 최소 지원 버전: iOS 26 / macOS 26 / watchOS 26
+- Xcode 26 이상(Swift 6.2 이상)이 필요합니다.
+- 앱의 최소 지원 버전도 위 버전 이상이어야 합니다. 더 낮은 OS를 지원해야 하면 2.x 버전을 계속 사용하세요.
 
 ## 1.x → 2.0 마이그레이션
 
