@@ -13,7 +13,7 @@ Postman / Apidog을 쓰던 감각 그대로 API를 코드로 정의하는 Swift 
 
 - Swift 6 / async-await / typed throws (`throws(NetworkError)`)
 - 외부 의존성 없음
-- iOS 14+, macOS 11+, watchOS 7+
+- iOS 26+, macOS 26+, watchOS 26+
 
 ---
 
